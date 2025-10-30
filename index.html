@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Generador de Comandos y Calibración</title>
+  <style>
+    body {
+      font-family: "Segoe UI", Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: #ff5555e4;
+      color: #0a1078ea;
+    }
+    h2 {
+      text-align: center;
+      color: #4f0f04f3;
+    }
+    .contenedor {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .panel {
+      flex: 1;
+      background: #ffffff;
+      padding: 20px 30px;
+      border-radius: 12px;
+      box-shadow: 0 3px 8px rgba(255, 0, 0, 0.799);
+    }
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+      color: #444;
+    }
+/* 🔹 Bloques visuales para cada tanque */
+    #camposTanques > div {
+      background: #f77061;          /* azul oscuro */
+      border-radius: 8px;
+      padding: 6px 10px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    }
+
+/* 🔹 Texto dentro del bloque */
+    #camposTanques label {
+      color: #ffffff;                  /* texto blanco */
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+/* 🔹 Campo input dentro del bloque */
+    #camposTanques input {
+      width: 100%;
+      border: none;
+      border-radius: 6px;
+      padding: 6px 8px;
+      font-size: 13px;
+      background: #f5f8fb;          /* gris muy claro */
+      color: #333;
+      box-sizing: border-box;
+      outline: none;
+    }
+
+/* 🔹 Efecto al pasar el mouse */
+    #camposTanques > div:hover {
+      background: #a00a0a;          /* azul más oscuro en hover */
+      transition: background 0.2s ease-in-out;
+    }
+    select, input {
+      width: 100%;
+      margin-top: 6px;
+      padding: 10px;
+      border: 1px solid #bbb;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    button {
+      margin-top: 20px;
+      width: 100%;
+      padding: 12px;
+      font-size: 16px;
+      background: rgb(255, 69, 69);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.2s;
+    }
+    button:hover {
+      background: #b73400;
+    }
+    .resultado {
+      margin-top: 25px;
+      padding: 15px;
+      border-radius: 10px;
+      background: #f9f9f9;
+      border-left: 6px solid #ec591a;
+      font-family: "Courier New", monospace;
+      font-size: 14px;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .mensaje-extra {
+      margin-top: 15px;
+      padding: 12px;
+      background: #fff8e1;
+      border-left: 6px solid #ff9800;
+      border-radius: 8px;
+      font-size: 14px;
+      color: #5d4037;
+    }
+    .hidden { display: none; }
+    @keyframes blink {
+      0%   { background-color: #ffffff; }
+      50%  { background-color: #e3f2fd; }  /* azul claro */
+      100% { background-color: #ffffff; }
+    }
+    .resultado.flash {
+      animation: blink 0.6s ease;
+    }
+    .fade-in {
+      animation: fadeIn 0.6s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: scale(0.95); }
+      to { opacity: 1; transform: scale(1); }
+    }
+    /* 🔹 Bloques combinados de combustible */
+    .bloques-combustible {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .bloque-comb {
+      flex: 1 1 48%;
+      background: #fafafa;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      padding: 10px 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      font-size: 13px;
+      line-height: 1.25em;
+      margin-bottom: 8px;
+    }
+    .bloque-comb b {
+      font-weight: 600;
+    }
+    .bloque-comb h4 {
+      margin: 0 0 4px 0;
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: #222;
+    }
+
+    .bloque-comb.descarga h4 {
+      color: #b71c1c;
+    }
+
+    .bloque-comb.abastecimiento h4 {
+      color: #932c19;
+    }
+
+    .bloque-comb pre {
+      margin: 2px 0;
+      font-size: 13px;
+      font-family: "Courier New", monospace;
+      color: #202060;
+      white-space: pre-wrap;
+      background: none;
+      border: none;
+      line-height: 1.2em;
+      padding: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="contenedor">
+    <!-- Panel Izquierdo -->
+    <div class="panel">
+      <h2>Generador de Comandos CalAmp</h2>
+
+      <label for="vid">VID:</label>
+      <input type="text" id="vid" placeholder="Ej. 46345915">
+
+      <label for="evento">Selecciona un evento:</label>
+      <select id="evento">
+        <option value="">-- Selecciona --</option>
+        <option value="aceleracion">Aceleración</option>
+        <option value="frenado">Frenado</option>
+        <option value="giro_izquierda">Giro Izquierda</option>
+        <option value="giro_derecha">Giro Derecha</option>
+        <option value="exceso_velocidad">Exceso Velocidad</option>
+        <option value="delay_exceso_velocidad">Delay Exceso Velocidad</option>
+        <!-- option value="remolque">Remolque</option -->
+        <!-- option value="impacto">Impacto</option -->
+        <option value="combustible">Combustible (Abastecimiento y Descarga)</option>
+        <option value="seteo_horometro">Seteo de Horómetro</option>
+        <option value="seteo_odometro">Seteo de Odómetro</option>
+      </select>
+
+      <div id="campoValor">
+        <label for="valor">Valor:</label>
+        <input type="number" id="valor" placeholder="Ej. 18" step="0.01">
+      </div>
+
+      <div id="campoCapacidad" class="hidden">
+        <label for="capacidad">Capacidad del tanque:</label>
+        <input type="number" id="capacidad" placeholder="Ej. 220">
+      </div>
+      <div id="comentarioSensores" class="mensaje-extra hidden" style="margin-top:10px;"></div>
+      <button onclick="generar()">🔹 Generar Comandos</button>
+
+      <div id="resultado" class="resultado">Los comandos aparecerán aquí...</div>
+      <div id="mensajeExtra" class="mensaje-extra hidden"></div>
+    </div>
+    <!-- Panel Derecho -->
+    <div class="panel">
+    <h2>CREACIÓN DE CALIBRACIÓN DE COMBUSTIBLE</h2>
+
+    <label for="numTanques">Cantidad de tanques:</label>
+    <select id="numTanques" onchange="generarCamposTanques()">
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+    </select>
+
+    <div id="camposTanques"></div>
+
+    <label for="ea">EA medido por el técnico (único):</label>
+    <input type="number" id="ea" value="9000" step="0.01">
+
+    <button onclick="interpolar()">Generar puntos</button>
+    <button onclick="exportarExcel()">📊 Exportar a Excel</button>
+
+    <h3>Interpolación (60 + 1 puntos):</h3>
+    <pre id="resultadoTexto" class="resultado"></pre>
+    </div>
+  <!-- Scripts -->
+  <script>
+    function pad4_hex(n) {
+      return ("0000" + n.toString(16).toUpperCase()).slice(-4);
+    }
+    function kmh_to_cms(kmh) {
+      return Math.round(kmh * 1000 / 36);
+    }
+
+    function generar() {
+      let vid = document.getElementById("vid").value.trim();
+      let evento = document.getElementById("evento").value;
+      let valor = parseFloat(document.getElementById("valor").value);
+      let capacidad = parseFloat(document.getElementById("capacidad").value);
+      let resultado = document.getElementById("resultado");
+      let mensajeExtra = document.getElementById("mensajeExtra");
+
+      mensajeExtra.innerHTML = "";
+      mensajeExtra.classList.add("hidden");
+
+      if (!evento || isNaN(valor)) {
+        resultado.innerHTML = "⚠️ Ingresa los datos requeridos.";
+        return;
+      }
+
+      let hunter = "", geosys = "", sms = "";
+
+      if (["aceleracion","frenado","giro_izquierda","giro_derecha"].includes(evento)) {
+        if (valor < 0 || valor > 900) {
+          resultado.innerHTML = "⚠️ Valor fuera de rango (0–900 mG).";
+          return;
+        }
+        let cod = {"aceleracion":"00","frenado":"01","giro_izquierda":"02","giro_derecha":"03"}[evento];
+        let hex4 = pad4_hex(valor);
+        hunter = `01 06 00 00 01 01 1B 00 03 ${cod} ${hex4.slice(0,2)} ${hex4.slice(2)}`;
+        //if (vid) geosys = `0x8305${vid}0106000001011B0003${cod}${hex4}`;
+        //else geosys = "(no VID)";
+        sms = `!RP,283,${parseInt(cod,16)},${valor}`;
+      }
+
+      else if (evento === "exceso_velocidad") {
+        if (valor < 0 || valor > 250) {
+          resultado.innerHTML = "⚠️ Valor fuera de rango (0–250 km/h).";
+          resultado.style.borderLeftColor = "#b71c1c";
+          resultado.style.background = "#ffebee";
+          resultado.classList.add("flash");
+          setTimeout(() => resultado.classList.remove("flash"), 600);
+          return;
+        }
+
+        let cms = kmh_to_cms(valor);
+        let hex4 = pad4_hex(cms);
+        hunter = `01 04 01 06 00 00 01 01 01 00 03 00 ${hex4.slice(0,2)} ${hex4.slice(2)}`;
+        //if (vid) geosys = `0x8305${vid}010401060000010101000300${hex4}`;
+        //else geosys = "(no VID)";
+        sms = `!RP,257,0,${cms}`;
+      }
+
+      else if (evento === "delay_exceso_velocidad") {
+        // 🚨 Validación de rango permitido
+        if (valor < 0 || valor > 300) {
+          resultado.innerHTML = "⚠️ Valor fuera de rango (0–300 s = hasta 5 minutos).";
+          resultado.style.borderLeftColor = "#b71c1c";
+          resultado.style.background = "#ffebee";
+          resultado.classList.add("flash");
+          setTimeout(() => resultado.classList.remove("flash"), 600);
+          return;
+        }
+        let hex4 = pad4_hex(valor);
+        hunter = `01 04 01 06 00 00 01 01 02 00 04 00 00 ${hex4.slice(0,2)} ${hex4.slice(2)}`;
+        //if (vid) geosys = `0x8305${vid}01040106000001010200040000${hex4}`;
+        //else geosys = "(no VID)";
+        sms = `!RP,258,0,${valor}`;
+      }
+      
+      else if (evento === "combustible") {
+        if (isNaN(capacidad)) { 
+          resultado.innerHTML = "⚠️ Ingresa capacidad de tanque."; 
+          return; 
+        }
+        if (isNaN(valor)) { 
+          resultado.innerHTML = "⚠️ Ingresa valor en litros."; 
+          return; 
+        }
+        const pasoDecimal = Math.ceil(9000 / capacidad);  // ✅ sin restar 1000
+        const valorDecimal = pasoDecimal * valor;         // ej. 36 × 20 = 720
+        const hexDescarga = valorDecimal.toString(16).toUpperCase().padStart(4, "0"); // 720 → 02D0
+        const hexDescSpaced = hexDescarga.match(/.{1,2}/g).join(" ");
+
+        const hunterDesc = `01 04 01 06 00 00 01 01 0A 00 05 13 00 00 ${hexDescSpaced}`;
+        const geosysDesc =  "(no VID)"; //vid ? `0x8305${vid}01040106000001010A0005130000${hexDescarga}` :
+        const smsDesc = `!RP,266,19,${valorDecimal}`;
+        const xorResult = (valorDecimal ^ 4095) + 1;                // XOR con 4095 + 1
+        const hexAbast = xorResult.toString(16).toUpperCase().padStart(8, "F"); // rellenar con F hasta 8 bits
+        const hexAbastSpaced = hexAbast.match(/.{1,2}/g).join(" ");
+
+        const hunterAbast = `01 04 01 06 00 00 01 01 0A 00 05 14 ${hexAbastSpaced}`;
+        const geosysAbast = "(no VID)"; //vid ? `0x8305${vid}01040106000001010A000514${hexAbast}` : 
+        const smsAbastDecimal = parseInt(hexAbast, 16);
+        const smsAbast = `!RP,266,20,${smsAbastDecimal}`;
+        resultado.innerHTML = `💡 <b>Recomendación:</b> Si son <b>dos tanques</b>, siempre ingresar en “Capacidad del tanque”<br>
+           la <b>semisuma</b> de ambos tanques y enviar ese comando.<br>
+          <div class="bloques-combustible">
+            <div class="bloque-comb descarga">
+              <h4>📦 DESCARGA INUSUAL</h4>
+              <pre><b>Hunter Pro:</b> ${hunterDesc}</pre>
+              <pre><b>GeoSys:</b> ${geosysDesc}</pre>
+              <pre><b>SMS:</b> ${smsDesc}</pre>
+            </div>
+            <div class="bloque-comb abastecimiento">
+              <h4>⛽ ABASTECIMIENTO</h4>
+              <pre><b>Hunter Pro:</b> ${hunterAbast}</pre>
+              <pre><b>GeoSys:</b> ${geosysAbast}</pre>
+              <pre><b>SMS:</b> ${smsAbast}</pre>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      else if (evento === "remolque") {
+        let hex4 = pad4_hex(valor);
+        hunter = `01 06 00 00 01 04 17 00 03 00 ${hex4.slice(0,2)} ${hex4.slice(2)}`;
+        //if (vid) geosys = `0x8305${vid}01060000010417000300${hex4}`;
+        //else geosys = "(no VID)";
+        sms = "!RP,1047,0," + valor;
+      }
+      else if (evento === "impacto") {
+        let hex4 = pad4_hex(valor);
+        hunter = `01 06 00 00 01 03 86 00 03 00 ${hex4.slice(0,2)} ${hex4.slice(2)}`;
+        //if (vid) geosys = `0x8305${vid}01060000010386000300${hex4}`;
+        //else geosys = "(no VID)";
+        sms = "!RP,902,0," + valor;
+      }
+      else if (evento === "seteo_odometro") {
+        // Valor ingresado en km → convertir a metros (unidad base del dispositivo)
+        let metros = valor * 1000;
+        if (metros < 0 || metros > 4294967295) {
+          resultado.innerHTML = "⚠️ Valor fuera de rango (0–4294967.295 km).";
+          return;
+        }
+        let hex8 = Math.floor(metros).toString(16).toUpperCase().padStart(8, "0");
+        let h_bytes = hex8.match(/.{1,2}/g).join(" ");
+        hunter = `01 06 00 00 01 0A 00 00 05 03 ${h_bytes}`;
+        //if (vid) geosys = `0x8305${vid}01060000010A00000503${hex8}`;
+        //else geosys = "(no VID)";
+        sms = `!RP,2560,3,${metros}`;
+        mensajeExtra.innerHTML = `ℹ️ Si se ingreso correctamente el dato en <b>KM</b>,<br>
+        el comando esta listo para enviarse, no se necesita hacer cambios.`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "seteo_horometro") {
+        // Valor ingresado en horas → convertir a segundos
+        let segundos = valor * 3600;
+        let segundos_pro = valor * 3599.97120023;
+        if (segundos < 0 || segundos > 4294967295) {
+          resultado.innerHTML = "⚠️ Valor fuera de rango (0–1,193,046.47 h aprox).";
+          return;
+        }
+        let hex8 = Math.floor(segundos).toString(16).toUpperCase().padStart(8, "0");
+        let hex8_pro = Math.floor(segundos_pro).toString(16).toUpperCase().padStart(8, "0");
+        let h_bytes = hex8_pro.match(/.{1,2}/g).join(" ");
+        hunter = `01 06 00 00 01 0A 00 00 05 08 ${h_bytes}`;
+        //if (vid) geosys = `0x8305${vid}01060000010A00000508${hex8}`;
+        //else geosys = "(no VID)";
+        sms = `!RP,2560,8,${segundos}`;
+        mensajeExtra.innerHTML = `ℹ️ Si se ingreso correctamente el dato en <b>Horas</b>,<br>
+        el comando esta listo para enviarse, no se necesita hacer cambios.`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      // Mostrar resultados
+      resultado.innerHTML = 
+        "📌 <b>Hunter Pro:</b><br>" + hunter + "<br><br>" +
+        "🌐 <b>GeoSys:</b><br>" + (geosys || "(no VID)") + "<br><br>" +
+        "📲 <b>SMS:</b><br>" + sms;
+
+      // Mostrar mensajes extra según evento
+      if (evento === "delay_exceso_velocidad") {
+        mensajeExtra.innerHTML = `⚠️ Usar este comando si NO se quiere delay de exceso de velocidad:<br>
+        Hunter Pro : 01 04 01 06 00 00 01 01 02 00 04 00 00 00 00<br>
+        Geosys : 0x8305(inserte VID)010401060000010102000400000000<br>
+        SMS : !RP,258,0,0<br>
+        es decir, para que el evento sea inmediato.`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "exceso_velocidad") {
+        mensajeExtra.innerHTML = `ℹ️ Para desactivar o colocar un valor alto de exceso de velocidad, el valor es 250:<br>
+        Hunter Pro : 01 04 01 06 00 00 01 01 01 00 03 00 1B 21<br>
+        Geosys : 0x8305(inserte VID)0104010600000101010003001B21<br>
+        SMS : !RP,257,0,6945<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "aceleracion") {
+        mensajeExtra.innerHTML = `ℹ️ El valor máximo (en mG) es 900:<br>
+        Hunter Pro : 01 06 00 00 01 01 1B 00 03 00 03 84<br>
+        GeoSys : 0x8305(inserte VID)0106000001011B0003000384<br>
+        SMS : !RP,283,0,900<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "frenado") {
+        mensajeExtra.innerHTML = `ℹ️ El valor máximo (en mG) es 900:<br>
+        Hunter Pro : 01 06 00 00 01 01 1B 00 03 01 03 84<br>
+        GeoSys : 0x8305(inserte VID)0106000001011B0003010384<br>
+        SMS : !RP,283,1,900<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "giro_izquierda") {
+        mensajeExtra.innerHTML = `ℹ️ El valor máximo (en mG) es 900:<br>
+        Hunter Pro : 01 06 00 00 01 01 1B 00 03 02 03 84<br>
+        GeoSys : 0x8305(inserte VID)0106000001011B0003020384<br>
+        SMS : !RP,283,2,900<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "giro_derecha") {
+        mensajeExtra.innerHTML = `ℹ️ El valor máximo (en mG) es 900:<br>
+        Hunter Pro : 01 06 00 00 01 01 1B 00 03 03 03 84<br>
+        GeoSys : 0x8305(inserte VID)0106000001011B0003030384<br>
+        SMS : !RP,283,3,900<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "remolque") {
+        mensajeExtra.innerHTML = `ℹ️ Configuración estándar de REMOLQUE, valor en 900.<br>
+        Hunter Pro : 01 06 00 00 01 04 17 00 03 00 03 84<br>
+        GeoSys : 0x8305(inserte VID)010600000104170003000384<br>
+        SMS : !RP,1047,0,900<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+      else if (evento === "impacto") {
+        mensajeExtra.innerHTML = `ℹ️ Configuración estándar de IMPACTO, valor en 9000.<br>
+        Hunter Pro : 01 06 00 00 01 03 86 00 03 00 23 28<br>
+        GeoSys : 0x8305(inserte VID)010600000103860003002328<br>
+        SMS : !RP,902,0,9000<br>`;
+        mensajeExtra.classList.remove("hidden");
+      }
+    }
+
+    // 🔹 Detectar cambios en el selector de eventos (fuera de la función)
+    document.getElementById("evento").addEventListener("change", function() {
+      let evento = this.value;
+      let campoCapacidad = document.getElementById("campoCapacidad");
+      let campoValor = document.getElementById("campoValor");
+      let labelValor = document.querySelector("label[for='valor']");
+      let inputValor = document.getElementById("valor");
+
+      // reset visual
+      campoValor.classList.remove("hidden");
+      labelValor.textContent = "Valor:";
+      inputValor.placeholder = "Ej. ingresar valor en mG";
+      campoCapacidad.classList.add("hidden");
+      comentarioSensores.classList.add("hidden");
+      comentarioSensores.innerHTML = "";
+
+      const res = document.getElementById("resultado");
+      res.innerHTML = "Los comandos aparecerán aquí...";
+      res.classList.add("flash");
+      setTimeout(() => res.classList.remove("flash"), 600);
+
+      const msg = document.getElementById("mensajeExtra");
+      msg.classList.add("hidden");
+      msg.innerHTML = "";
+
+      if (evento === "combustible") {
+        campoCapacidad.classList.remove("hidden");
+        campoValor.classList.remove("hidden");
+        labelValor.textContent = "Litros a simular:";
+        inputValor.placeholder = "Ej. 20";
+        comentarioSensores.innerHTML = "💡 Si se instaló 2 o más sensores, ingresar la semisuma de los litros.";
+        comentarioSensores.classList.remove("hidden");
+      } 
+      else if (evento === "exceso_velocidad") {
+        labelValor.textContent = "Velocidad:";
+        inputValor.placeholder = "Ingresar en km/h";
+      } 
+      else if (evento === "seteo_odometro") {
+        labelValor.textContent = "Valor Odómetro (en km):";
+        inputValor.placeholder = "Ej. 120000";
+      } 
+      else if (evento === "seteo_horometro") {
+        labelValor.textContent = "Valor Horómetro (en horas):";
+        inputValor.placeholder = "Ej. 1200";
+      }
+    });
+    // 🧩 Enter ejecuta acción activa
+    document.addEventListener("keydown", function(e) {
+      if (e.key === "Enter" && !e.target.matches("select")) {
+        e.preventDefault();
+        const activo = document.activeElement;
+
+        // 🔹 Ejecutar "Generar Comandos"
+        if (
+          document.getElementById("vid").contains(activo) || 
+          document.getElementById("valor").contains(activo) ||
+          document.getElementById("capacidad").contains(activo)
+        ) {
+          generar();
+        } 
+
+        // 🔹 Ejecutar "Procesar PDF"
+        else if (
+          document.getElementById("eaInput").contains(activo) ||
+          document.getElementById("pdfFile").contains(activo)
+        ) {
+          procesarPDF();
+        }
+      }
+    });
+
+    </script>
+<!-- 🔹 Librerías necesarias -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<script>
+function generarCamposTanques() {
+  const n = parseInt(document.getElementById("numTanques").value);
+  const contenedor = document.getElementById("camposTanques");
+  contenedor.innerHTML = "";
+  for (let i = 1; i <= n; i++) {
+    contenedor.innerHTML += `
+      <div>
+        <label>Tanque ${i} - Capacidad (L):</label>
+        <input type="number" id="litros${i}" value="100" step="0.01">
+      </div>
+    `;
+  }
+}
+window.onload = generarCamposTanques;
+
+function obtenerCapacidadPromedio() {
+  const n = parseInt(document.getElementById("numTanques").value);
+  let sumaLitros = 0;
+  for (let i = 1; i <= n; i++) {
+    let litros = parseFloat(document.getElementById("litros"+i).value);
+    if (isNaN(litros)) {
+      alert("⚠️ Ingresa la capacidad de todos los tanques.");
+      return null;
+    }
+    sumaLitros += litros;
+  }
+  return sumaLitros / n;
+}
+
+function interpolar() {
+  const litrosProm = obtenerCapacidadPromedio();
+  if (!litrosProm) return;
+  const eaMedido = parseFloat(document.getElementById("ea").value);
+  if (eaMedido < 1000 || eaMedido > 9000) {
+    alert("⚠️ El valor de EA debe estar entre 1000 y 9000.");
+    return;
+  }
+
+  const cantidad = 60;
+  const mV_inicio = 1000;
+  const mV_fin = eaMedido;
+  const paso_mV = (mV_fin - mV_inicio) / (cantidad - 1);
+  let salida = "";
+
+  for (let i = 0; i < cantidad; i++) {
+    let mV_actual = mV_inicio + paso_mV * i;
+    if (mV_actual > 9000) break;
+    let litros_actual = ((mV_actual - mV_inicio) / (mV_fin - mV_inicio)) * litrosProm;
+    salida += `${mV_actual.toFixed(2)},${litros_actual.toFixed(2)}\n`;
+  }
+
+  if (eaMedido < 9000) {
+    const pendiente = (eaMedido - mV_inicio) / litrosProm;
+    const delta = 9000 - eaMedido;
+    const litros_extra = litrosProm + (delta / pendiente);
+    salida += `9000.00,${litros_extra.toFixed(2)}\n`;
+  }
+
+  document.getElementById("resultadoTexto").textContent = salida.trim();
+}
+
+function exportarExcel() {
+  const litrosProm = obtenerCapacidadPromedio();
+  if (!litrosProm) return;
+  const eaMedido = parseFloat(document.getElementById("ea").value);
+  if (eaMedido < 1000 || eaMedido > 9000) {
+    alert("⚠️ El valor de EA debe estar entre 1000 y 9000.");
+    return;
+  }
+
+  const cantidad = 60;
+  const mV_inicio = 1000;
+  const mV_fin = eaMedido;
+  const paso_mV = (mV_fin - mV_inicio) / (cantidad - 1);
+  let datosExcel = [["Valor reportado (mV)", "Valor real (L)"]];
+
+  for (let i = 0; i < cantidad; i++) {
+    let mV_actual = mV_inicio + paso_mV * i;
+    if (mV_actual > 9000) break;
+    let litros_actual = ((mV_actual - mV_inicio) / (mV_fin - mV_inicio)) * litrosProm;
+    datosExcel.push([mV_actual.toFixed(2), litros_actual.toFixed(2)]);
+  }
+
+  if (eaMedido < 9000) {
+    const pendiente = (eaMedido - mV_inicio) / litrosProm;
+    const delta = 9000 - eaMedido;
+    const litros_extra = litrosProm + (delta / pendiente);
+    datosExcel.push(["9000.00", litros_extra.toFixed(2)]);
+  }
+
+  const ws = XLSX.utils.aoa_to_sheet(datosExcel);
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Interpolación");
+  XLSX.writeFile(wb, "calibracion_multi_tanque.xlsx");
+}
+</script>
+<script>
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Enter" && !e.target.matches("select")) {
+    e.preventDefault();
+
+    // Detectar si el foco está dentro del panel derecho
+    const elementosDerecha = [
+      "numTanques",
+      "litros1",
+      "litros2",
+      "litros3",
+      "ea"
+    ];
+
+    // Si el elemento activo está dentro de ese grupo → ejecutar "Generar puntos"
+    if (elementosDerecha.includes(document.activeElement.id)) {
+      interpolar();
+    }
+  }
+});
+</script>
+</body>
+</html>
